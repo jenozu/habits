@@ -1,0 +1,45 @@
+{
+  "date": "2026-08-20",
+  "routines": [
+    {
+      "id": "morning",
+      "name": "Morning routine",
+      "area": "Personal",
+      "icon": "☀",
+      "schedule": "Every morning",
+      "nextStep": "Finish before work",
+      "steps": [
+        { "id": "priorities", "label": "Review priorities", "done": true },
+        { "id": "supplements", "label": "Take supplements", "done": false },
+        { "id": "bonus", "label": "Optional stretch", "done": false, "optional": true }
+      ]
+    },
+    {
+      "id": "trading",
+      "name": "Trading discipline",
+      "area": "Trading",
+      "icon": "↗",
+      "schedule": "Only on days I trade",
+      "steps": [
+        { "id": "review", "label": "Review session", "done": false }
+      ]
+    }
+  ],
+  "entries": [
+    {
+      "id": "entry-1",
+      "date": "2026-08-19",
+      "title": "A day",
+      "text": "Reflection text",
+      "mood": "Good",
+      "attachments": [
+        { "id": "photo-1", "type": "image", "name": "photo.jpg" },
+        { "id": "audio-1", "type": "audio", "name": "Voice memo" }
+      ]
+    }
+  ],
+  "history": {
+    "2026-08-18": 100,
+    "2026-08-19": 50
+  }
+}
