@@ -35,3 +35,14 @@ export async function getMedia(id: string): Promise<Blob | null> {
   db.close();
   return blob;
 }
+
+export async function deleteMedia(id: string): Promise<void> {
+  const db = await openDatabase();
+  await new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, "readwrite");
+    transaction.objectStore(STORE_NAME).delete(id);
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+  });
+  db.close();
+}
