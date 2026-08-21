@@ -1,18 +1,18 @@
 # Habit Tracker
 
-A phone-first habit tracker for personal routines and trading discipline.
+A phone-first tracker for active routines, tasks, next steps, progress, and daily reflection.
 
 ## Version 1 features
 
 - Morning and evening routine checklists
-- End-of-session trading reviews
-- Plan-followed, trade count, P/L, mistake tags, and lesson notes
-- Weekly progress, streaks, badges, and discipline-versus-P/L reporting
-- CSV export and print-to-PDF reports
+- Active routine progress and clear next steps
+- General daily journal with photos, voice-to-text, and voice memos
+- Weekly consistency, overall streaks, and progress by routine
+- Data backup and print-to-PDF reports
 - Automatic light and dark appearance
 - No login required
 
-Version 1 stores data in the browser on the current device. A hosted database and account system can be added before opening the app to public users.
+Trading is included only as an example routine and can be treated like any other life area. Version 1 stores data and media in the browser on the current device. A hosted database and account system can be added before opening the app to public users or syncing across devices.
 
 ## Deploy with Vercel
 

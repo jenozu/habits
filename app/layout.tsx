@@ -9,15 +9,15 @@ export const metadata: Metadata = {
         : "http://localhost:3000"),
   ),
   title: "Habit Tracker",
-  description: "A focused habit tracker for daily routines and trading discipline.",
+  description: "A personal routine, progress, and daily journaling companion.",
   openGraph: {
     title: "Habit Tracker",
-    description: "Routines that protect your discipline.",
+    description: "Build routines, review your progress, and reflect on each day.",
   },
   twitter: {
     card: "summary",
     title: "Habit Tracker",
-    description: "Routines that protect your discipline.",
+    description: "Build routines, review your progress, and reflect on each day.",
   },
   icons: {
     icon: "/favicon.svg",
