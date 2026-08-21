@@ -41,4 +41,11 @@ describe("routine schedules", () => {
     const activated = createCheckIn(manual, "2026-08-21", true, true);
     expect(isRoutineDue(manual, "2026-08-21", [activated], settings)).toBe(true);
   });
+
+  it("stops newly scheduling archived routines while preserving stored history", () => {
+    const archived = routine({ archivedAt: "2026-08-20T16:00:00Z" });
+    expect(isRoutineDue(archived, "2026-08-21", [], settings)).toBe(false);
+    const historical = createCheckIn(archived, "2026-08-19", true, false);
+    expect(isRoutineDue(archived, "2026-08-19", [historical], settings)).toBe(true);
+  });
 });
