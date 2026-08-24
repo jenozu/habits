@@ -18,6 +18,21 @@ describe("successful days and overall streaks", () => {
     expect(dueProgressForDate(app, "2026-08-21")).toEqual({ complete: 1, total: 1, percent: 100, neutral: false });
   });
 
+  it("keeps one-time tasks out of routine success and streak scoring", () => {
+    const definition = routine();
+    const app = state([definition], [completedCheckIn(definition, "2026-08-21")]);
+    app.standaloneTasks.push({
+      id: "overdue-errand",
+      title: "Return a package",
+      dueDate: "2026-08-20",
+      priority: "high",
+      createdAt: "2026-08-19T12:00:00.000Z",
+      updatedAt: "2026-08-19T12:00:00.000Z",
+    });
+    expect(evaluateDay(app, "2026-08-21", new Date("2026-08-22T12:00:00Z"))).toBe("success");
+    expect(calculateOverallStreak(app, "2026-08-21", new Date("2026-08-22T12:00:00Z"))).toBe(1);
+  });
+
   it("keeps an incomplete day provisional until its grace deadline", () => {
     const definition = routine({ graceMinutes: 60 });
     const app = state([definition]);

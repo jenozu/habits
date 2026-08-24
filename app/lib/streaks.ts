@@ -1,18 +1,18 @@
 import { addDays, endOfZonedDay } from "./date";
 import { routineCompletionWithinGrace } from "./completion";
 import { isRoutineDue } from "./schedules";
-import type { AppStateV3, ISODate, RoutineCheckIn } from "../types/domain";
+import type { AppState, ISODate, RoutineCheckIn } from "../types/domain";
 
 export type DayStatus = "success" | "failure" | "provisional" | "neutral";
 
-function dueCheckInsForDate(state: AppStateV3, date: ISODate): RoutineCheckIn[] {
+function dueCheckInsForDate(state: AppState, date: ISODate): RoutineCheckIn[] {
   return state.routines
     .filter((routine) => isRoutineDue(routine, date, state.checkIns, state.settings))
     .map((routine) => state.checkIns.find((checkIn) => checkIn.routineId === routine.id && checkIn.date === date))
     .filter((checkIn): checkIn is RoutineCheckIn => Boolean(checkIn));
 }
 
-export function evaluateDay(state: AppStateV3, date: ISODate, now = new Date()): DayStatus {
+export function evaluateDay(state: AppState, date: ISODate, now = new Date()): DayStatus {
   const dueRoutines = state.routines.filter((routine) => isRoutineDue(routine, date, state.checkIns, state.settings));
   if (dueRoutines.length === 0) {
     const legacy = state.legacyDailySnapshots.find((snapshot) => snapshot.date === date);
@@ -42,7 +42,7 @@ export function evaluateDay(state: AppStateV3, date: ISODate, now = new Date()):
   return now.getTime() <= latestDeadline ? "provisional" : "failure";
 }
 
-export function calculateOverallStreak(state: AppStateV3, today: ISODate, now = new Date()): number {
+export function calculateOverallStreak(state: AppState, today: ISODate, now = new Date()): number {
   let streak = 0;
   let date = today;
   for (let count = 0; count < 366; count += 1) {
@@ -54,7 +54,7 @@ export function calculateOverallStreak(state: AppStateV3, today: ISODate, now = 
   return streak;
 }
 
-export function dueProgressForDate(state: AppStateV3, date: ISODate) {
+export function dueProgressForDate(state: AppState, date: ISODate) {
   const due = state.routines.filter((routine) => isRoutineDue(routine, date, state.checkIns, state.settings));
   if (!due.length) return { complete: 0, total: 0, percent: 0, neutral: true };
   const completed = due.filter((routine) => {

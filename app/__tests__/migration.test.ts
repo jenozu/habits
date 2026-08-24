@@ -1,6 +1,6 @@
 import fixture from "./fixtures/v2.json";
-import { migrateV2ToV3, type V2State } from "../lib/migrations";
-import { loadAppState, V2_RECOVERY_KEY, V2_STORAGE_KEY, V3_STORAGE_KEY } from "../storage/app-store";
+import { migrateV2ToV3, migrateV3ToV4, type V2State } from "../lib/migrations";
+import { loadAppState, V2_RECOVERY_KEY, V2_STORAGE_KEY, V3_RECOVERY_KEY, V3_STORAGE_KEY, V4_STORAGE_KEY } from "../storage/app-store";
 
 class MemoryStorage implements Storage {
   private values = new Map<string, string>();
@@ -41,7 +41,7 @@ describe("V2 to V3 migration", () => {
     expect(migrateV2ToV3(fixture as V2State, now)).toEqual(first);
   });
 
-  it("keeps the original payload as a recovery copy and verifies V3", () => {
+  it("keeps the original payload as a recovery copy and verifies V4", () => {
     const storage = new MemoryStorage();
     const raw = JSON.stringify(fixture);
     storage.setItem(V2_STORAGE_KEY, raw);
@@ -49,7 +49,23 @@ describe("V2 to V3 migration", () => {
     expect(result.status).toBe("migrated");
     expect(storage.getItem(V2_STORAGE_KEY)).toBe(raw);
     expect(storage.getItem(V2_RECOVERY_KEY)).toBe(raw);
-    expect(JSON.parse(storage.getItem(V3_STORAGE_KEY)!)).toMatchObject({ schemaVersion: 3 });
+    expect(JSON.parse(storage.getItem(V4_STORAGE_KEY)!)).toMatchObject({ schemaVersion: 4, standaloneTasks: [] });
+  });
+
+  it("upgrades V3 exactly once and preserves the V3 payload", () => {
+    const storage = new MemoryStorage();
+    const v3 = migrateV2ToV3(fixture as V2State, now);
+    const raw = JSON.stringify(v3);
+    storage.setItem(V3_STORAGE_KEY, raw);
+
+    const first = loadAppState(storage, now);
+    expect(first).toMatchObject({ status: "migrated", state: { schemaVersion: 4, standaloneTasks: [] } });
+    expect(storage.getItem(V3_STORAGE_KEY)).toBe(raw);
+    expect(storage.getItem(V3_RECOVERY_KEY)).toBe(raw);
+
+    const second = loadAppState(storage, now);
+    expect(second).toMatchObject({ status: "ok", state: first.state });
+    expect(migrateV3ToV4(first.state)).toBe(first.state);
   });
 
   it("never erases corrupt storage and returns downloadable raw data", () => {
@@ -59,6 +75,6 @@ describe("V2 to V3 migration", () => {
     expect(result).toMatchObject({ status: "error", raw: "{broken-json", source: "v2" });
     expect(storage.getItem(V2_STORAGE_KEY)).toBe("{broken-json");
     expect(storage.getItem(V2_RECOVERY_KEY)).toBe("{broken-json");
-    expect(storage.getItem(V3_STORAGE_KEY)).toBeNull();
+    expect(storage.getItem(V4_STORAGE_KEY)).toBeNull();
   });
 });

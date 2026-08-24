@@ -1,4 +1,4 @@
-import type { AppStateV3, RoutineCheckIn, RoutineDefinition } from "../types/domain";
+import type { AppState, RoutineCheckIn, RoutineDefinition } from "../types/domain";
 import { DEFAULT_SETTINGS } from "../types/domain";
 import { createCheckIn, updateTaskCompletion } from "../lib/completion";
 
@@ -17,6 +17,6 @@ export function completedCheckIn(definition: RoutineDefinition, date: string, co
   return updateTaskCompletion(initial, definition.tasks[0].id, true, { ...DEFAULT_SETTINGS }, new Date(completedAt), false);
 }
 
-export function state(routines: RoutineDefinition[], checkIns: RoutineCheckIn[] = []): AppStateV3 {
-  return { schemaVersion: 3, routines, checkIns, journalEntries: [], attachments: [], settings: { ...DEFAULT_SETTINGS }, legacyDailySnapshots: [], badges: [], inAppNotifications: [], reportSnapshots: [] };
+export function state(routines: RoutineDefinition[], checkIns: RoutineCheckIn[] = []): AppState {
+  return { schemaVersion: 4, routines, checkIns, standaloneTasks: [], journalEntries: [], attachments: [], settings: { ...DEFAULT_SETTINGS }, legacyDailySnapshots: [], badges: [], inAppNotifications: [], reportSnapshots: [] };
 }

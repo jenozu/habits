@@ -119,6 +119,21 @@ export type LegacyDailySnapshot = {
   importedFrom: "v2";
 };
 
+export type StandaloneTaskPriority = "low" | "normal" | "high";
+
+export type StandaloneTask = {
+  id: string;
+  title: string;
+  notes?: string;
+  dueDate?: ISODate;
+  dueTime?: string;
+  priority: StandaloneTaskPriority;
+  completedAt?: ISODateTime;
+  createdAt: ISODateTime;
+  updatedAt: ISODateTime;
+  deletedAt?: ISODateTime;
+};
+
 export type AppStateV3 = {
   schemaVersion: 3;
   routines: RoutineDefinition[];
@@ -131,6 +146,13 @@ export type AppStateV3 = {
   inAppNotifications: { id: string; createdAt: ISODateTime; message: string; readAt?: ISODateTime }[];
   reportSnapshots: { id: string; weekStart: ISODate; createdAt: ISODateTime }[];
 };
+
+export type AppStateV4 = Omit<AppStateV3, "schemaVersion"> & {
+  schemaVersion: 4;
+  standaloneTasks: StandaloneTask[];
+};
+
+export type AppState = AppStateV4;
 
 export const DEFAULT_SETTINGS: AppSettings = {
   timeZone: "America/Toronto",
