@@ -1,4 +1,6 @@
-import { afterEach } from "vitest";
+import { afterEach, vi } from "vitest";
 import { cleanup } from "@testing-library/react";
 
 afterEach(() => cleanup());
+
+Object.defineProperty(window, "scrollTo", { value: vi.fn(), writable: true });

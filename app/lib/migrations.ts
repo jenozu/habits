@@ -1,6 +1,6 @@
 import { calculateRoutineResult, taskSnapshots } from "./completion";
 import { dateKeyAt, historicalCompletionInstant } from "./date";
-import { DEFAULT_SETTINGS, type AppStateV3, type CompletionRule, type JournalAttachment, type RoutineDefinition, type ScheduleRule } from "../types/domain";
+import { DEFAULT_SETTINGS, type AppStateV3, type AppStateV4, type CompletionRule, type JournalAttachment, type RoutineDefinition, type ScheduleRule } from "../types/domain";
 
 export type V2Step = { id?: string; label?: string; done?: boolean; optional?: boolean };
 export type V2Routine = { id?: string; name?: string; area?: string; icon?: string; schedule?: string; nextStep?: string; steps?: V2Step[] };
@@ -132,4 +132,13 @@ export function isV2State(value: unknown): value is V2State {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Record<string, unknown>;
   return candidate.schemaVersion === undefined && (candidate.routines === undefined || Array.isArray(candidate.routines)) && (candidate.entries === undefined || Array.isArray(candidate.entries));
+}
+
+export function migrateV3ToV4(input: AppStateV3 | AppStateV4): AppStateV4 {
+  if ((input as AppStateV4).schemaVersion === 4) return input as AppStateV4;
+  return {
+    ...input,
+    schemaVersion: 4,
+    standaloneTasks: [],
+  };
 }

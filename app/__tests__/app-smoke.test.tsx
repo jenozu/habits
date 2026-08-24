@@ -10,7 +10,10 @@ vi.mock("../media-store", () => ({
 }));
 
 describe("app foundation integration", () => {
-  beforeEach(() => window.localStorage.clear());
+  beforeEach(() => {
+    window.localStorage.clear();
+    window.history.replaceState({}, "", "/");
+  });
 
   it("starts with general routines and keeps trading manually activated", async () => {
     render(<HabitApp />);
@@ -25,5 +28,21 @@ describe("app foundation integration", () => {
     expect(await screen.findByText("Morning routine")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Journal" }));
     expect(await screen.findByText("A day")).toBeTruthy();
+  });
+
+  it("opens routine details from the card header without blocking check-ins", async () => {
+    render(<HabitApp />);
+    const openDetails = await screen.findByRole("button", { name: "Open Morning routine details" });
+    fireEvent.click(openDetails);
+    expect(await screen.findByRole("heading", { name: "Morning routine" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /All routines/ })).toBeTruthy();
+  });
+
+  it("switches the dashboard between day and week views", async () => {
+    render(<HabitApp />);
+    const weekButton = await screen.findByRole("button", { name: "Week" });
+    fireEvent.click(weekButton);
+    expect(weekButton.getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("heading", { name: "Consistency by day" })).toBeTruthy();
   });
 });

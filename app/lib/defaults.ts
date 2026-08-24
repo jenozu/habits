@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, type AppStateV3, type RoutineDefinition } from "../types/domain";
+import { DEFAULT_SETTINGS, type AppState, type RoutineDefinition } from "../types/domain";
 
 export function defaultRoutines(now = new Date()): RoutineDefinition[] {
   const timestamp = now.toISOString();
@@ -34,9 +34,9 @@ export function defaultRoutines(now = new Date()): RoutineDefinition[] {
   ];
 }
 
-export function createDefaultState(now = new Date()): AppStateV3 {
+export function createDefaultState(now = new Date()): AppState {
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     routines: defaultRoutines(now),
     checkIns: [],
     journalEntries: [],
@@ -46,5 +46,6 @@ export function createDefaultState(now = new Date()): AppStateV3 {
     badges: [],
     inAppNotifications: [],
     reportSnapshots: [],
+    standaloneTasks: [],
   };
 }

@@ -4,8 +4,11 @@ A phone-first tracker for active routines, tasks, next steps, progress, and dail
 
 ## Trustworthy foundation features
 
-- Versioned V3 storage with separate routine definitions and dated check-ins
-- Recoverable, idempotent migration from `habit-tracker-v2`
+- Versioned V4 storage with separate routine definitions, dated check-ins, and standalone tasks
+- Recoverable, idempotent migrations from `habit-tracker-v2` and `habit-tracker-v3`
+- Home dashboard with separate Day and Week views
+- Dedicated Routines and Tasks pages, with focused detail views for each item
+- Dated and Anytime one-off tasks that never affect routine streaks
 - Daily, weekday, times-per-week, interval, specific-date, and manually activated schedules
 - Configurable Toronto-aware date boundaries, week start, success rules, and routine grace periods
 - Editable historical check-ins with due-based progress and overall streak recalculation
@@ -19,9 +22,9 @@ A phone-first tracker for active routines, tasks, next steps, progress, and dail
 
 Trading is included only as an optional, manually activated example routine and can be treated like any other life area. The app stores data and media in the browser on the current device. A hosted database and account system can be added before opening the app to public users or syncing across devices.
 
-### V2 migration safety
+### Storage migration safety
 
-On first launch, a valid `habit-tracker-v2` payload is converted to V3. The original V2 JSON remains untouched and is also copied to `habit-tracker-v2-recovery` before the V3 save is verified. Corrupt or unmigratable data is never deleted automatically; the app offers a raw recovery download and requires an explicit reset.
+On first launch, a valid `habit-tracker-v2` payload is converted through V3 to V4. An existing V3 payload is upgraded directly to V4 by adding an empty standalone-task collection. The original V2 or V3 JSON remains untouched and is copied to its matching recovery key before the V4 save is verified. Corrupt or unmigratable data is never deleted automatically; the app offers a raw recovery download and requires an explicit reset.
 
 ## Deploy with Vercel
 
