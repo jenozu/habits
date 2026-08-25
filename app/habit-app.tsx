@@ -134,6 +134,28 @@ export default function HabitApp({ initialView = "dashboard", initialEntityId }:
     showNotice(wasEditing ? "Routine updated" : "Routine added");
   }
 
+  function moveRoutine(routineId: string, direction: -1 | 1) {
+    setState((current) => {
+      const active = current.routines
+        .filter((routine) => !routine.archivedAt)
+        .sort((left, right) => left.sortOrder - right.sortOrder);
+      const index = active.findIndex((routine) => routine.id === routineId);
+      const targetIndex = index + direction;
+      if (index < 0 || targetIndex < 0 || targetIndex >= active.length) return current;
+
+      const reordered = [...active];
+      [reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]];
+      const sortOrderById = new Map(reordered.map((routine, sortOrder) => [routine.id, sortOrder]));
+      return {
+        ...current,
+        routines: current.routines.map((routine) => routine.archivedAt
+          ? routine
+          : { ...routine, sortOrder: sortOrderById.get(routine.id) ?? routine.sortOrder }),
+      };
+    });
+    showNotice("Routine order saved");
+  }
+
   function archiveRoutine(routineId: string) {
     const archivedAt = new Date().toISOString();
     setState((current) => ({ ...current, routines: current.routines.map((routine) => routine.id === routineId ? { ...routine, archivedAt, updatedAt: archivedAt } : routine) }));
@@ -237,7 +259,7 @@ export default function HabitApp({ initialView = "dashboard", initialEntityId }:
         )}
         <section className="content">
           {view === "dashboard" && <DashboardView mode={dashboardMode} setMode={setDashboardMode} date={selectedDate} currentDate={currentDate} setDate={setSelectedDate} state={state} onToggleRoutine={toggleRoutineStep} onActivate={activateRoutine} onOpenRoutine={(id) => navigate("routineDetail", id)} onAddRoutine={() => setEditingRoutine(null)} onToggleTask={toggleStandaloneTask} onOpenTask={(id) => navigate("taskDetail", id)} onAddTask={() => setEditingTask(null)} />}
-          {view === "routines" && <RoutinesView date={selectedDate} state={state} onOpen={(id) => navigate("routineDetail", id)} onAdd={() => setEditingRoutine(null)} />}
+          {view === "routines" && <RoutinesView date={selectedDate} state={state} onOpen={(id) => navigate("routineDetail", id)} onAdd={() => setEditingRoutine(null)} onMove={moveRoutine} />}
           {view === "tasks" && <TasksView date={currentDate} tasks={state.standaloneTasks} onToggle={toggleStandaloneTask} onOpen={(id) => navigate("taskDetail", id)} onAdd={() => setEditingTask(null)} />}
           {view === "routineDetail" && <RoutineDetailView routine={routine} date={selectedDate} currentDate={currentDate} setDate={setSelectedDate} state={state} onBack={() => navigate("routines")} onToggle={toggleRoutineStep} onActivate={activateRoutine} onEdit={(value) => setEditingRoutine(value)} />}
           {view === "taskDetail" && <TaskDetailView task={standaloneTask} onBack={() => navigate("tasks")} onToggle={toggleStandaloneTask} onEdit={(value) => setEditingTask(value)} onDelete={deleteStandaloneTask} />}
@@ -264,8 +286,8 @@ function DashboardView({ mode, setMode, date, currentDate, setDate, state, onTog
   const routineTotals = dueProgressForDate(state, date);
   const taskTotals = taskProgressForDate(state.standaloneTasks, date);
   const streak = calculateOverallStreak(state, currentDate);
-  const dueRoutines = state.routines.filter((routine) => isRoutineDue(routine, date, state.checkIns, state.settings));
-  const available = state.routines.filter((routine) => isRoutineAvailable(routine, date, state.checkIns, state.settings));
+  const dueRoutines = state.routines.filter((routine) => isRoutineDue(routine, date, state.checkIns, state.settings)).sort((left, right) => left.sortOrder - right.sortOrder);
+  const available = state.routines.filter((routine) => isRoutineAvailable(routine, date, state.checkIns, state.settings)).sort((left, right) => left.sortOrder - right.sortOrder);
   const dayTasks = tasksForDate(state.standaloneTasks, date);
   const lateTasks = date === currentDate ? overdueTasks(state.standaloneTasks, date) : [];
 
@@ -301,13 +323,13 @@ function WeeklyDashboard({ date, currentDate, state, setDate, onOpenTask }: { da
   </>;
 }
 
-function RoutinesView({ date, state, onOpen, onAdd }: { date: ISODate; state: AppState; onOpen: (id: string) => void; onAdd: () => void }) {
+function RoutinesView({ date, state, onOpen, onAdd, onMove }: { date: ISODate; state: AppState; onOpen: (id: string) => void; onAdd: () => void; onMove: (id: string, direction: -1 | 1) => void }) {
   const active = state.routines.filter((routine) => !routine.archivedAt).sort((left, right) => left.sortOrder - right.sortOrder);
   const archived = state.routines.filter((routine) => routine.archivedAt);
   return <>
     <div className="page-intro"><span className="eyebrow">REPEATING RHYTHMS</span><h1>Your routines.</h1><p>Recurring behaviours live here. Open any card to see its schedule, checklist, next step, and history.</p></div>
     <SectionHeading eyebrow="ACTIVE" title="All routines" action="+ Add routine" onAction={onAdd} />
-    <div className="focus-list">{active.map((routine) => { const checkIn = state.checkIns.find((value) => value.routineId === routine.id && value.date === date); return <RoutineSummaryCard key={routine.id} routine={routine} checkIn={checkIn} state={state} date={date} onOpen={() => onOpen(routine.id)} />; })}</div>
+    <div className="focus-list">{active.map((routine, index) => { const checkIn = state.checkIns.find((value) => value.routineId === routine.id && value.date === date); return <article className="reorderable-routine" key={routine.id}><RoutineSummaryCard routine={routine} checkIn={checkIn} state={state} date={date} onOpen={() => onOpen(routine.id)} /><div className="reorder-controls" aria-label={`Reorder ${routine.name}`}><button type="button" aria-label={`Move ${routine.name} up`} disabled={index === 0} onClick={() => onMove(routine.id, -1)}>↑</button><button type="button" aria-label={`Move ${routine.name} down`} disabled={index === active.length - 1} onClick={() => onMove(routine.id, 1)}>↓</button></div></article>; })}</div>
     {archived.length > 0 && <><SectionHeading eyebrow="HISTORY PRESERVED" title="Archived routines" /><div className="focus-list muted-list">{archived.map((routine) => <RoutineSummaryCard key={routine.id} routine={routine} state={state} date={date} onOpen={() => onOpen(routine.id)} />)}</div></>}
   </>;
 }
@@ -417,13 +439,22 @@ function RoutineComposer({ initial, today, onClose, onSave, onArchive }: { initi
   const [graceMinutes, setGraceMinutes] = useState(initial?.graceMinutes ?? 0);
   const [tasks, setTasks] = useState<TaskDraft[]>(() => initial?.tasks.map(({ id, label, required, countsTowardProgress }) => ({ id, label, required, countsTowardProgress })) ?? [{ id: crypto.randomUUID(), label: "", required: true, countsTowardProgress: true }]);
   const setScheduleType = (type: ScheduleRule["type"]) => setSchedule(type === "daily" ? { type } : type === "weekdays" ? { type, days: [1, 2, 3, 4, 5] } : type === "timesPerWeek" ? { type, count: 3 } : type === "interval" ? { type, every: 2, unit: "day", anchorDate: today } : type === "specificDates" ? { type, dates: [today] } : { type: "manual" });
+  function moveTask(index: number, direction: -1 | 1) {
+    setTasks((current) => {
+      const targetIndex = index + direction;
+      if (targetIndex < 0 || targetIndex >= current.length) return current;
+      const reordered = [...current];
+      [reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]];
+      return reordered;
+    });
+  }
   function save() {
     const validTasks = tasks.filter((task) => task.label.trim());
     if (!name.trim() || !validTasks.length) return;
     const timestamp = new Date().toISOString();
     onSave({ id: initial?.id ?? crypto.randomUUID(), name: name.trim(), areaId: area, icon: initial?.icon ?? (area === "Trading" ? "↗" : area === "Health" ? "♥" : "◆"), nextAction: nextAction.trim() || validTasks[0].label.trim(), schedule, completionRule, graceMinutes: Math.max(0, graceMinutes), sortOrder: initial?.sortOrder ?? 999, createdAt: initial?.createdAt ?? timestamp, updatedAt: timestamp, tasks: validTasks.map((task, order) => ({ ...task, label: task.label.trim(), order, type: initial?.tasks.find((value) => value.id === task.id)?.type ?? "check" })) });
   }
-  return <Modal onClose={onClose} wide title={initial ? "Edit routine" : "New routine"}><span className="eyebrow">{initial ? "EDIT ROUTINE" : "NEW ROUTINE"}</span><h2>{initial ? "Adjust the routine rules" : "What are you working on?"}</h2><div className="field"><label>Routine name<input value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. Study French" /></label></div><div className="field split"><label>Life area<select value={area} onChange={(event) => setArea(event.target.value)}>{["Personal", "Health", "Learning", "Work", "Trading"].map((value) => <option key={value}>{value}</option>)}</select></label><label>Schedule<select value={schedule.type} onChange={(event) => setScheduleType(event.target.value as ScheduleRule["type"])}><option value="daily">Every day</option><option value="weekdays">Selected weekdays</option><option value="timesPerWeek">Times per week</option><option value="interval">Interval</option><option value="specificDates">Specific dates</option><option value="manual">Manual activation</option></select></label></div><ScheduleFields schedule={schedule} setSchedule={setSchedule} today={today} /><div className="field"><label>Completion rule<select value={completionRule.type} onChange={(event) => { const type = event.target.value as "allRequired" | "percentage" | "count"; setCompletionRule(type === "allRequired" ? { type } : type === "percentage" ? { type, threshold: 75 } : { type, requiredCount: 1 }); }}><option value="allRequired">All required steps</option><option value="percentage">Percentage threshold</option><option value="count">Step count</option>{completionRule.type === "duration" && <option value="duration">Duration target (legacy)</option>}</select></label></div><CompletionFields rule={completionRule} setRule={setCompletionRule} /><div className="field"><label>Grace period after midnight (minutes)<input type="number" min="0" max="1440" value={graceMinutes} onChange={(event) => setGraceMinutes(Number(event.target.value))} /></label></div><div className="field"><label>Routine steps</label><div className="task-editor">{tasks.map((task, index) => <div key={task.id}><input aria-label={`Step ${index + 1}`} value={task.label} onChange={(event) => setTasks((current) => current.map((value) => value.id === task.id ? { ...value, label: event.target.value } : value))} placeholder="Step name" /><label><input type="checkbox" checked={task.required} onChange={(event) => setTasks((current) => current.map((value) => value.id === task.id ? { ...value, required: event.target.checked } : value))} /> Required</label><label><input type="checkbox" checked={task.countsTowardProgress} onChange={(event) => setTasks((current) => current.map((value) => value.id === task.id ? { ...value, countsTowardProgress: event.target.checked } : value))} /> Counts toward progress</label>{tasks.length > 1 && <button type="button" onClick={() => setTasks((current) => current.filter((value) => value.id !== task.id))}>Remove</button>}</div>)}</div><button className="mini-link add-task" type="button" onClick={() => setTasks((current) => [...current, { id: crypto.randomUUID(), label: "", required: true, countsTowardProgress: true }])}>+ Add step</button></div><div className="field"><label>What comes next?<input value={nextAction} onChange={(event) => setNextAction(event.target.value)} placeholder="Your immediate focus" /></label></div><button className="primary-button wide-button" disabled={!name.trim() || !tasks.some((task) => task.label.trim())} onClick={save}>{initial ? "Save routine" : "Add routine"}</button>{onArchive && <button className="archive-button" type="button" onClick={onArchive}>Archive routine and preserve history</button>}</Modal>;
+  return <Modal onClose={onClose} wide title={initial ? "Edit routine" : "New routine"}><span className="eyebrow">{initial ? "EDIT ROUTINE" : "NEW ROUTINE"}</span><h2>{initial ? "Adjust the routine rules" : "What are you working on?"}</h2><div className="field"><label>Routine name<input value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. Study French" /></label></div><div className="field split"><label>Life area<select value={area} onChange={(event) => setArea(event.target.value)}>{["Personal", "Health", "Learning", "Work", "Trading"].map((value) => <option key={value}>{value}</option>)}</select></label><label>Schedule<select value={schedule.type} onChange={(event) => setScheduleType(event.target.value as ScheduleRule["type"])}><option value="daily">Every day</option><option value="weekdays">Selected weekdays</option><option value="timesPerWeek">Times per week</option><option value="interval">Interval</option><option value="specificDates">Specific dates</option><option value="manual">Manual activation</option></select></label></div><ScheduleFields schedule={schedule} setSchedule={setSchedule} today={today} /><div className="field"><label>Completion rule<select value={completionRule.type} onChange={(event) => { const type = event.target.value as "allRequired" | "percentage" | "count"; setCompletionRule(type === "allRequired" ? { type } : type === "percentage" ? { type, threshold: 75 } : { type, requiredCount: 1 }); }}><option value="allRequired">All required steps</option><option value="percentage">Percentage threshold</option><option value="count">Step count</option>{completionRule.type === "duration" && <option value="duration">Duration target (legacy)</option>}</select></label></div><CompletionFields rule={completionRule} setRule={setCompletionRule} /><div className="field"><label>Grace period after midnight (minutes)<input type="number" min="0" max="1440" value={graceMinutes} onChange={(event) => setGraceMinutes(Number(event.target.value))} /></label></div><div className="field"><label>Routine steps</label><div className="task-editor">{tasks.map((task, index) => { const stepName = task.label.trim() || `step ${index + 1}`; return <div key={task.id}><div className="step-reorder" aria-label={`Reorder ${stepName}`}><button type="button" className="step-move" aria-label={`Move ${stepName} up`} disabled={index === 0} onClick={() => moveTask(index, -1)}>↑</button><span>{index + 1}</span><button type="button" className="step-move" aria-label={`Move ${stepName} down`} disabled={index === tasks.length - 1} onClick={() => moveTask(index, 1)}>↓</button></div><input aria-label={`Step ${index + 1}`} value={task.label} onChange={(event) => setTasks((current) => current.map((value) => value.id === task.id ? { ...value, label: event.target.value } : value))} placeholder="Step name" /><label><input type="checkbox" checked={task.required} onChange={(event) => setTasks((current) => current.map((value) => value.id === task.id ? { ...value, required: event.target.checked } : value))} /> Required</label><label><input type="checkbox" checked={task.countsTowardProgress} onChange={(event) => setTasks((current) => current.map((value) => value.id === task.id ? { ...value, countsTowardProgress: event.target.checked } : value))} /> Counts toward progress</label>{tasks.length > 1 && <button className="remove-step" type="button" onClick={() => setTasks((current) => current.filter((value) => value.id !== task.id))}>Remove</button>}</div>; })}</div><button className="mini-link add-task" type="button" onClick={() => setTasks((current) => [...current, { id: crypto.randomUUID(), label: "", required: true, countsTowardProgress: true }])}>+ Add step</button></div><div className="field"><label>What comes next?<input value={nextAction} onChange={(event) => setNextAction(event.target.value)} placeholder="Your immediate focus" /></label></div><button className="primary-button wide-button" disabled={!name.trim() || !tasks.some((task) => task.label.trim())} onClick={save}>{initial ? "Save routine" : "Add routine"}</button>{onArchive && <button className="archive-button" type="button" onClick={onArchive}>Archive routine and preserve history</button>}</Modal>;
 }
 
 function ScheduleFields({ schedule, setSchedule, today }: { schedule: ScheduleRule; setSchedule: (schedule: ScheduleRule) => void; today: ISODate }) {
