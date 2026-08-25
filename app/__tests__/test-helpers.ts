@@ -18,5 +18,5 @@ export function completedCheckIn(definition: RoutineDefinition, date: string, co
 }
 
 export function state(routines: RoutineDefinition[], checkIns: RoutineCheckIn[] = []): AppState {
-  return { schemaVersion: 4, routines, checkIns, standaloneTasks: [], journalEntries: [], attachments: [], settings: { ...DEFAULT_SETTINGS }, legacyDailySnapshots: [], badges: [], inAppNotifications: [], reportSnapshots: [] };
+  return { schemaVersion: 5, routines, checkIns, standaloneTasks: [], journalEntries: [], attachments: [], settings: { ...DEFAULT_SETTINGS }, legacyDailySnapshots: [], badges: [], inAppNotifications: [], reportSnapshots: [] };
 }

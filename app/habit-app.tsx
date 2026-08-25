@@ -54,6 +54,21 @@ export default function HabitApp({ initialView = "dashboard", initialEntityId }:
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
+    const root = document.documentElement;
+    const media = typeof window.matchMedia === "function" ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+    const applyTheme = () => {
+      const resolved = state.settings.theme === "system" && media?.matches ? "dark" : state.settings.theme === "dark" ? "dark" : "light";
+      root.dataset.theme = resolved;
+      root.dataset.colorMode = state.settings.theme;
+      root.style.colorScheme = resolved;
+    };
+    applyTheme();
+    if (state.settings.theme !== "system" || !media) return;
+    media.addEventListener?.("change", applyTheme);
+    return () => media.removeEventListener?.("change", applyTheme);
+  }, [state.settings.theme]);
+
+  useEffect(() => {
     if (selectedDate === previousCurrentDate.current) setSelectedDate(currentDate);
     previousCurrentDate.current = currentDate;
   }, [currentDate, selectedDate]);
@@ -261,7 +276,7 @@ function DashboardView({ mode, setMode, date, currentDate, setDate, state, onTog
       <div className="greeting-row"><div><p className="date-label">{formatDateLabel(date, state.settings.timeZone)}</p><h1>Your day,<br />clearly mapped.</h1></div><div className="streak-pill"><span>🔥</span><strong>{streak}</strong><small>day streak</small></div></div>
       <div className="dashboard-metrics"><article><span>ROUTINES</span><strong>{routineTotals.neutral ? "—" : `${routineTotals.percent}%`}</strong><small>{routineTotals.neutral ? "Neutral day" : `${routineTotals.complete}/${routineTotals.total} complete`}</small></article><article><span>TASKS</span><strong>{taskTotals.total ? `${taskTotals.percent}%` : "—"}</strong><small>{taskTotals.total ? `${taskTotals.complete}/${taskTotals.total} complete` : "Nothing due"}</small></article></div>
       <SectionHeading eyebrow="ROUTINES" title="Due this day" action="+ Add routine" onAction={onAddRoutine} />
-      <div className="routine-stack">{dueRoutines.length ? dueRoutines.map((routine) => <RoutineChecklist key={routine.id} routine={routine} checkIn={state.checkIns.find((value) => value.routineId === routine.id && value.date === date)} onToggle={onToggleRoutine} onOpen={() => onOpenRoutine(routine.id)} />) : <EmptyState title="No routines are due" detail="This date is neutral unless you activate an available routine." />}</div>
+      <div className="routine-stack">{dueRoutines.length ? dueRoutines.map((routine) => <RoutineChecklist key={routine.id} routine={routine} checkIn={state.checkIns.find((value) => value.routineId === routine.id && value.date === date)} showJournalPrompt={state.settings.dailyJournalReminderEnabled} onToggle={onToggleRoutine} onOpen={() => onOpenRoutine(routine.id)} />) : <EmptyState title="No routines are due" detail="This date is neutral unless you activate an available routine." />}</div>
       {available.length > 0 && <><SectionHeading eyebrow="AVAILABLE" title="Start when relevant" /><div className="available-list">{available.map((routine) => <article className="trade-card" key={routine.id}><button className="available-main" onClick={() => onOpenRoutine(routine.id)}><span className="trade-icon">{routine.icon}</span><span className="trade-copy"><strong>{routine.name}</strong><small>{scheduleLabel(routine.schedule)} · optional until activated</small></span></button><button className="compact-button" onClick={() => onActivate(routine.id)}>Activate</button></article>)}</div></>}
       <SectionHeading eyebrow="TASKS" title="Due this day" action="+ Add task" onAction={onAddTask} />
       <div className="standalone-list">{[...lateTasks, ...dayTasks].length ? [...lateTasks, ...dayTasks].map((task) => <StandaloneTaskRow key={task.id} task={task} today={date} onToggle={onToggleTask} onOpen={onOpenTask} />) : <EmptyState title="No tasks due" detail="Add a one-time task for this date, or leave it in Anytime." />}</div>
@@ -302,7 +317,7 @@ function RoutineDetailView({ routine, date, currentDate, setDate, state, onBack,
   const checkIn = state.checkIns.find((value) => value.routineId === routine.id && value.date === date);
   const due = isRoutineDue(routine, date, state.checkIns, state.settings);
   const available = isRoutineAvailable(routine, date, state.checkIns, state.settings);
-  const snapshots = checkIn?.taskSnapshots ?? taskSnapshots(routine);
+  const snapshots = (checkIn?.taskSnapshots ?? taskSnapshots(routine)).filter((task) => state.settings.dailyJournalReminderEnabled || task.type !== "journalLink");
   const next = snapshots.find((task) => !checkIn?.taskCheckIns.find((value) => value.taskId === task.id)?.completed);
   const history = state.checkIns.filter((value) => value.routineId === routine.id).sort((left, right) => right.date.localeCompare(left.date)).slice(0, 8);
   return <>
@@ -345,8 +360,8 @@ function TaskDetailView({ task, onBack, onToggle, onEdit, onDelete }: { task?: S
   </>;
 }
 
-function RoutineChecklist({ routine, checkIn, onToggle, onOpen }: { routine: RoutineDefinition; checkIn?: RoutineCheckIn; onToggle: (routineId: string, taskId: string) => void; onOpen: () => void }) {
-  const snapshots = checkIn?.taskSnapshots ?? taskSnapshots(routine);
+function RoutineChecklist({ routine, checkIn, showJournalPrompt, onToggle, onOpen }: { routine: RoutineDefinition; checkIn?: RoutineCheckIn; showJournalPrompt: boolean; onToggle: (routineId: string, taskId: string) => void; onOpen: () => void }) {
+  const snapshots = (checkIn?.taskSnapshots ?? taskSnapshots(routine)).filter((task) => showJournalPrompt || task.type !== "journalLink");
   return <article className="routine-block"><button className="routine-card-header" onClick={onOpen} aria-label={`Open ${routine.name} details`}><span className="routine-icon">{routine.icon}</span><span className="routine-heading"><small className="eyebrow">{routine.areaId}</small><strong>{routine.name}</strong><em>{scheduleLabel(routine.schedule)}</em></span><span className="routine-percent">{routineProgress(checkIn)}%</span><span className="card-chevron" aria-hidden="true">›</span></button><div className="slim-progress" role="progressbar" aria-label={`${routine.name} progress`} aria-valuenow={routineProgress(checkIn)} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${routineProgress(checkIn)}%` }} /></div><div className="task-list compact-list">{snapshots.map((task) => { const complete = checkIn?.taskCheckIns.find((value) => value.taskId === task.id)?.completed === true; return <button key={task.id} role="checkbox" aria-checked={complete} className={`task-row ${complete ? "done" : ""}`} onClick={() => onToggle(routine.id, task.id)}><span className="checkmark">{complete ? "✓" : ""}</span><span className="task-copy"><strong>{task.label}</strong>{!task.required && <small>{task.countsTowardProgress ? "Optional · scored" : "Optional · unscored"}</small>}</span></button>; })}</div></article>;
 }
 
@@ -433,11 +448,76 @@ function CompletionFields({ rule, setRule }: { rule: CompletionRule; setRule: (r
   return null;
 }
 
+type SettingsPanel = "appearance" | "calendar" | "success" | "journal" | "media" | "notifications";
+
 function SettingsView({ state, onSettings }: { state: AppState; onSettings: (settings: AppSettings) => void }) {
   const settings = state.settings;
   const rule = settings.successfulDayRule;
-  function exportData() { downloadFile(JSON.stringify(state, null, 2), "habit-tracker-v4-data-export.json", "application/json"); }
-  return <><div className="page-intro"><span className="eyebrow">PREFERENCES</span><h1>Make it yours.</h1><p>Routine rules, time boundaries, and data controls live here.</p></div><div className="settings-group"><h2>Calendar & success</h2><div className="settings-editor"><label>Time zone<select value={settings.timeZone} onChange={(event) => onSettings({ ...settings, timeZone: event.target.value })}><option value="America/Toronto">America/Toronto</option><option value="America/New_York">America/New_York</option><option value="UTC">UTC</option></select></label><label>Week starts on<select value={settings.weekStartsOn} onChange={(event) => onSettings({ ...settings, weekStartsOn: Number(event.target.value) })}>{["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((day, index) => <option value={index} key={day}>{day}</option>)}</select></label><label>Successful day rule<select value={rule.type} onChange={(event) => { const type = event.target.value; onSettings({ ...settings, successfulDayRule: type === "percentage" ? { type, threshold: 75 } : type === "selectedRoutines" ? { type, routineIds: [] } : { type: "allDueRoutines" } }); }}><option value="allDueRoutines">Complete all due routines</option><option value="percentage">Percentage of due routines</option><option value="selectedRoutines">Selected routines</option></select></label>{rule.type === "percentage" && <label>Success threshold<input type="number" min="1" max="100" value={rule.threshold} onChange={(event) => onSettings({ ...settings, successfulDayRule: { ...rule, threshold: Number(event.target.value) } })} /></label>}{rule.type === "selectedRoutines" && <fieldset><legend>Routines required for success</legend>{state.routines.map((routine) => <label key={routine.id}><input type="checkbox" checked={rule.routineIds.includes(routine.id)} onChange={(event) => onSettings({ ...settings, successfulDayRule: { ...rule, routineIds: event.target.checked ? [...rule.routineIds, routine.id] : rule.routineIds.filter((id) => id !== routine.id) } })} /> {routine.name}</label>)}</fieldset>}</div></div><div className="settings-group"><h2>Journal</h2><SettingRow title="Daily journal reminder" detail="Prompt me during the evening routine" /><SettingRow title="Microphone & photos" detail="Permissions are requested only when used" /></div><div className="settings-group"><h2>Your data</h2><SettingRow title="Download V4 data export" detail="Versioned routines, tasks, check-ins, settings, and journal metadata" onClick={exportData} /><SettingRow title="Generate PDF report" detail="Open a print-ready view" onClick={() => window.print()} /><SettingRow title="Notification permission" detail="Enable browser reminders while supported" onClick={() => "Notification" in window && window.Notification.requestPermission()} /></div></>;
+  const [panel, setPanel] = useState<SettingsPanel | null>(null);
+  const [mediaStatus, setMediaStatus] = useState("");
+  const [notificationStatus, setNotificationStatus] = useState(() => typeof window !== "undefined" && "Notification" in window ? window.Notification.permission : "unsupported");
+  const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+  function togglePanel(next: SettingsPanel) {
+    setPanel((current) => current === next ? null : next);
+  }
+
+  function exportData() {
+    downloadFile(JSON.stringify(state, null, 2), "habit-tracker-v5-data-export.json", "application/json");
+  }
+
+  async function testMicrophone() {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setMediaStatus("Microphone access is not supported in this browser.");
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((track) => track.stop());
+      setMediaStatus("Microphone access is working. The test stream was closed.");
+    } catch {
+      setMediaStatus("Microphone access was declined or unavailable.");
+    }
+  }
+
+  async function requestNotifications() {
+    if (!("Notification" in window)) {
+      setNotificationStatus("unsupported");
+      return;
+    }
+    const permission = await window.Notification.requestPermission();
+    setNotificationStatus(permission);
+  }
+
+  return <>
+    <div className="page-intro"><span className="eyebrow">PREFERENCES</span><h1>Make it yours.</h1><p>Tap any row to review and change that setting.</p></div>
+
+    <div className="settings-group"><h2>Appearance</h2>
+      <SettingRow title="Colour mode" detail={`${settings.theme[0].toUpperCase()}${settings.theme.slice(1)} · Light is the default`} expanded={panel === "appearance"} onClick={() => togglePanel("appearance")} />
+      {panel === "appearance" && <div className="settings-panel" aria-label="Colour mode settings"><p>Choose a fixed appearance or follow this device.</p><div className="settings-options" role="group" aria-label="Colour mode">{(["light", "dark", "system"] as const).map((theme) => <button type="button" className={settings.theme === theme ? "selected" : ""} aria-pressed={settings.theme === theme} key={theme} onClick={() => onSettings({ ...settings, theme })}>{theme[0].toUpperCase()}{theme.slice(1)}</button>)}</div></div>}
+    </div>
+
+    <div className="settings-group"><h2>Calendar & success</h2>
+      <SettingRow title="Date & calendar" detail={`${settings.timeZone} · Week starts ${days[settings.weekStartsOn]}`} expanded={panel === "calendar"} onClick={() => togglePanel("calendar")} />
+      {panel === "calendar" && <div className="settings-panel settings-editor"><label>Time zone<select value={settings.timeZone} onChange={(event) => onSettings({ ...settings, timeZone: event.target.value })}><option value="America/Toronto">America/Toronto</option><option value="America/New_York">America/New_York</option><option value="UTC">UTC</option></select></label><label>Week starts on<select value={settings.weekStartsOn} onChange={(event) => onSettings({ ...settings, weekStartsOn: Number(event.target.value) })}>{days.map((day, index) => <option value={index} key={day}>{day}</option>)}</select></label></div>}
+      <SettingRow title="Successful day rule" detail={rule.type === "allDueRoutines" ? "Complete all due routines" : rule.type === "percentage" ? `${rule.threshold}% of due routines` : `${rule.routineIds.length} selected routine${rule.routineIds.length === 1 ? "" : "s"}`} expanded={panel === "success"} onClick={() => togglePanel("success")} />
+      {panel === "success" && <div className="settings-panel settings-editor"><label>Successful day rule<select value={rule.type} onChange={(event) => { const type = event.target.value; onSettings({ ...settings, successfulDayRule: type === "percentage" ? { type, threshold: 75 } : type === "selectedRoutines" ? { type, routineIds: [] } : { type: "allDueRoutines" } }); }}><option value="allDueRoutines">Complete all due routines</option><option value="percentage">Percentage of due routines</option><option value="selectedRoutines">Selected routines</option></select></label>{rule.type === "percentage" && <label>Success threshold<input type="number" min="1" max="100" value={rule.threshold} onChange={(event) => onSettings({ ...settings, successfulDayRule: { ...rule, threshold: Math.min(100, Math.max(1, Number(event.target.value))) } })} /></label>}{rule.type === "selectedRoutines" && <fieldset><legend>Routines required for success</legend>{state.routines.map((routine) => <label key={routine.id}><input type="checkbox" checked={rule.routineIds.includes(routine.id)} onChange={(event) => onSettings({ ...settings, successfulDayRule: { ...rule, routineIds: event.target.checked ? [...rule.routineIds, routine.id] : rule.routineIds.filter((id) => id !== routine.id) } })} /> {routine.name}</label>)}</fieldset>}</div>}
+    </div>
+
+    <div className="settings-group"><h2>Journal & permissions</h2>
+      <SettingRow title="Daily journal reminder" detail={settings.dailyJournalReminderEnabled ? "On · Show the journal prompt in routines" : "Off · Hide the journal prompt"} expanded={panel === "journal"} onClick={() => togglePanel("journal")} />
+      {panel === "journal" && <div className="settings-panel"><p>Controls whether journal prompt steps appear in your routine checklists. Journal entries remain available from the Journal tab.</p><label className="toggle-setting"><input type="checkbox" checked={settings.dailyJournalReminderEnabled} onChange={(event) => onSettings({ ...settings, dailyJournalReminderEnabled: event.target.checked })} /><span>{settings.dailyJournalReminderEnabled ? "Reminder enabled" : "Reminder disabled"}</span></label></div>}
+      <SettingRow title="Microphone & photos" detail={mediaStatus || "Test access without saving anything"} expanded={panel === "media"} onClick={() => togglePanel("media")} />
+      {panel === "media" && <div className="settings-panel"><p>Permissions are requested only when you use a related feature. Tests do not save media.</p><div className="settings-actions"><button type="button" className="secondary-button" onClick={testMicrophone}>Test microphone</button><label className="secondary-button file-test">Test photo picker<input type="file" accept="image/*" onChange={(event) => { setMediaStatus(event.target.files?.[0] ? "Photo access is working. Nothing was saved." : "No photo selected."); event.currentTarget.value = ""; }} /></label></div>{mediaStatus && <p role="status" className="settings-status">{mediaStatus}</p>}</div>}
+    </div>
+
+    <div className="settings-group"><h2>Your data & browser</h2>
+      <SettingRow title="Download V5 data export" detail="Routines, tasks, check-ins, settings, and journal metadata" onClick={exportData} />
+      <SettingRow title="Generate PDF report" detail="Open a print-ready view" onClick={() => window.print()} />
+      <SettingRow title="Notification permission" detail={notificationStatus === "unsupported" ? "Not supported by this browser" : `Browser status: ${notificationStatus}`} expanded={panel === "notifications"} onClick={() => togglePanel("notifications")} />
+      {panel === "notifications" && <div className="settings-panel"><p>Browser permission is required before supported reminders can appear.</p><button type="button" className="secondary-button" onClick={requestNotifications} disabled={notificationStatus === "unsupported"}>Request notification permission</button><p role="status" className="settings-status">Current status: {notificationStatus}</p></div>}
+    </div>
+  </>;
 }
 
 function DateNavigator({ date, currentDate, setDate }: { date: ISODate; currentDate: ISODate; setDate: (date: ISODate) => void }) {
@@ -451,7 +531,7 @@ function completionLabel(rule: CompletionRule) { if (rule.type === "allRequired"
 function weeklyValues(state: AppState, date: ISODate) { return weekDates(date, state.settings.weekStartsOn).map((value) => { const progress = dueProgressForDate(state, value); const legacy = state.legacyDailySnapshots.find((snapshot) => snapshot.date === value); return { date: value, day: new Date(`${value}T12:00:00Z`).toLocaleString("en", { weekday: "narrow", timeZone: "UTC" }), value: progress.neutral ? legacy?.completionPercent ?? 0 : progress.percent, neutral: progress.neutral && !legacy }; }); }
 function WeekBars({ state, date }: { state: AppState; date: ISODate }) { return <div className="week-bars">{weeklyValues(state, date).map((item) => <div className="day-bar" key={item.date} title={item.neutral ? "Neutral day" : `${item.value}%`}><div className="bar-track"><i className={item.neutral ? "neutral-bar" : ""} style={{ height: `${item.neutral ? 4 : Math.max(item.value, 7)}%` }} /></div><span>{item.day}</span></div>)}</div>; }
 function NavButton({ active, icon, label, onClick }: { active: boolean; icon: string; label: string; onClick: () => void }) { return <button aria-current={active ? "page" : undefined} className={active ? "active" : ""} onClick={onClick}><span aria-hidden="true">{icon}</span><small>{label}</small></button>; }
-function SettingRow({ title, detail, onClick }: { title: string; detail: string; onClick?: () => void }) { return <button className="setting-row" onClick={onClick}><span><strong>{title}</strong><small>{detail}</small></span><b aria-hidden="true">›</b></button>; }
+function SettingRow({ title, detail, onClick, expanded }: { title: string; detail: string; onClick: () => void; expanded?: boolean }) { return <button type="button" className="setting-row" aria-expanded={expanded} onClick={onClick}><span><strong>{title}</strong><small>{detail}</small></span><b aria-hidden="true">{expanded ? "⌃" : "›"}</b></button>; }
 function formatTaskDate(date: ISODate) { return new Date(`${date}T12:00:00Z`).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }); }
 function pathForDestination(view: AppView, id?: string) { if (view === "dashboard") return "/"; if (view === "routineDetail") return `/routines/${id ?? ""}`; if (view === "taskDetail") return `/tasks/${id ?? ""}`; return `/${view}`; }
 function destinationFromPath(path: string): { view: AppView; id?: string } { const parts = path.split("/").filter(Boolean); if (!parts.length) return { view: "dashboard" }; if (parts[0] === "routines" && parts[1]) return { view: "routineDetail", id: decodeURIComponent(parts[1]) }; if (parts[0] === "tasks" && parts[1]) return { view: "taskDetail", id: decodeURIComponent(parts[1]) }; if (["routines", "tasks", "journal", "settings"].includes(parts[0])) return { view: parts[0] as AppView }; return { view: "dashboard" }; }

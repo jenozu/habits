@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import HabitApp from "../habit-app";
 import fixture from "./fixtures/v2.json";
 import { V2_STORAGE_KEY } from "../storage/app-store";
@@ -44,5 +44,38 @@ describe("app foundation integration", () => {
     fireEvent.click(weekButton);
     expect(weekButton.getAttribute("aria-pressed")).toBe("true");
     expect(screen.getByRole("heading", { name: "Consistency by day" })).toBeTruthy();
+  });
+
+  it("defaults to light and makes appearance settings interactive", async () => {
+    render(<HabitApp initialView="settings" />);
+    const colourMode = await screen.findByRole("button", { name: /Colour mode/ });
+    expect(document.documentElement.dataset.theme).toBe("light");
+    fireEvent.click(colourMode);
+    const dark = screen.getByRole("button", { name: "Dark" });
+    fireEvent.click(dark);
+    await waitFor(() => expect(document.documentElement.dataset.theme).toBe("dark"));
+    expect(dark.getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("opens settings rows and persists their controls", async () => {
+    render(<HabitApp initialView="settings" />);
+    const calendar = await screen.findByRole("button", { name: /Date & calendar/ });
+    fireEvent.click(calendar);
+    expect(screen.getByLabelText("Time zone")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Week starts on"), { target: { value: "1" } });
+    expect(screen.getByRole("button", { name: /Date & calendar/ }).textContent).toContain("Monday");
+
+    fireEvent.click(screen.getByRole("button", { name: /Successful day rule/ }));
+    expect(screen.getByLabelText("Successful day rule")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: /Daily journal reminder/ }));
+    const reminder = screen.getByRole("checkbox", { name: /Reminder enabled/ });
+    fireEvent.click(reminder);
+    expect(screen.getByText("Reminder disabled")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: /Microphone & photos/ }));
+    expect(screen.getByRole("button", { name: "Test microphone" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Notification permission/ }));
+    expect(screen.getByRole("button", { name: "Request notification permission" })).toBeTruthy();
   });
 });

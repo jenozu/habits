@@ -152,12 +152,16 @@ export type AppStateV4 = Omit<AppStateV3, "schemaVersion"> & {
   standaloneTasks: StandaloneTask[];
 };
 
-export type AppState = AppStateV4;
+export type AppStateV5 = Omit<AppStateV4, "schemaVersion"> & {
+  schemaVersion: 5;
+};
+
+export type AppState = AppStateV5;
 
 export const DEFAULT_SETTINGS: AppSettings = {
   timeZone: "America/Toronto",
   weekStartsOn: 0,
   successfulDayRule: { type: "allDueRoutines" },
-  theme: "system",
+  theme: "light",
   dailyJournalReminderEnabled: true,
 };
