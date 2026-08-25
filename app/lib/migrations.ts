@@ -1,6 +1,6 @@
 import { calculateRoutineResult, taskSnapshots } from "./completion";
 import { dateKeyAt, historicalCompletionInstant } from "./date";
-import { DEFAULT_SETTINGS, type AppStateV3, type AppStateV4, type CompletionRule, type JournalAttachment, type RoutineDefinition, type ScheduleRule } from "../types/domain";
+import { DEFAULT_SETTINGS, type AppStateV3, type AppStateV4, type AppStateV5, type CompletionRule, type JournalAttachment, type RoutineDefinition, type ScheduleRule } from "../types/domain";
 
 export type V2Step = { id?: string; label?: string; done?: boolean; optional?: boolean };
 export type V2Routine = { id?: string; name?: string; area?: string; icon?: string; schedule?: string; nextStep?: string; steps?: V2Step[] };
@@ -140,5 +140,19 @@ export function migrateV3ToV4(input: AppStateV3 | AppStateV4): AppStateV4 {
     ...input,
     schemaVersion: 4,
     standaloneTasks: [],
+  };
+}
+
+export function migrateV4ToV5(input: AppStateV4 | AppStateV5): AppStateV5 {
+  if ((input as AppStateV5).schemaVersion === 5) return input as AppStateV5;
+  return {
+    ...input,
+    schemaVersion: 5,
+    settings: {
+      ...input.settings,
+      // V4 exposed no appearance control, so its system value was never an
+      // intentional user choice. V5 starts every existing installation in light.
+      theme: "light",
+    },
   };
 }

@@ -4,8 +4,8 @@ A phone-first tracker for active routines, tasks, next steps, progress, and dail
 
 ## Trustworthy foundation features
 
-- Versioned V4 storage with separate routine definitions, dated check-ins, and standalone tasks
-- Recoverable, idempotent migrations from `habit-tracker-v2` and `habit-tracker-v3`
+- Versioned V5 storage with separate routine definitions, dated check-ins, and standalone tasks
+- Recoverable, idempotent migrations from `habit-tracker-v2`, `habit-tracker-v3`, and `habit-tracker-v4`
 - Home dashboard with separate Day and Week views
 - Dedicated Routines and Tasks pages, with focused detail views for each item
 - Dated and Anytime one-off tasks that never affect routine streaks
@@ -17,14 +17,14 @@ A phone-first tracker for active routines, tasks, next steps, progress, and dail
 - General daily journal with photos, voice-to-text, and voice memos
 - Weekly consistency, overall streaks, and progress by routine
 - Versioned JSON data export and print-to-PDF reports
-- Automatic light and dark appearance
+- Light-by-default appearance with working Light, Dark, and System controls
 - No login required
 
 Trading is included only as an optional, manually activated example routine and can be treated like any other life area. The app stores data and media in the browser on the current device. A hosted database and account system can be added before opening the app to public users or syncing across devices.
 
 ### Storage migration safety
 
-On first launch, a valid `habit-tracker-v2` payload is converted through V3 to V4. An existing V3 payload is upgraded directly to V4 by adding an empty standalone-task collection. The original V2 or V3 JSON remains untouched and is copied to its matching recovery key before the V4 save is verified. Corrupt or unmigratable data is never deleted automatically; the app offers a raw recovery download and requires an explicit reset.
+On first launch, a valid `habit-tracker-v2` payload is converted through V3 and V4 to V5. Existing V3 and V4 payloads follow the same verified chain, with V4 installations receiving Light as their initial appearance because the earlier System value had no user-facing control. Original payloads remain untouched and are copied to matching recovery keys before the V5 save is verified. Corrupt or unmigratable data is never deleted automatically; the app offers a raw recovery download and requires an explicit reset.
 
 ## Deploy with Vercel
 

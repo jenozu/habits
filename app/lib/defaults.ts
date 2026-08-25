@@ -36,7 +36,7 @@ export function defaultRoutines(now = new Date()): RoutineDefinition[] {
 
 export function createDefaultState(now = new Date()): AppState {
   return {
-    schemaVersion: 4,
+    schemaVersion: 5,
     routines: defaultRoutines(now),
     checkIns: [],
     journalEntries: [],

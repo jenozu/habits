@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createDefaultState } from "../lib/defaults";
-import { loadAppState, saveAppState, V2_RECOVERY_KEY, V2_STORAGE_KEY, V3_RECOVERY_KEY, V3_STORAGE_KEY, V4_STORAGE_KEY, type LoadResult } from "../storage/app-store";
+import { loadAppState, saveAppState, V2_RECOVERY_KEY, V2_STORAGE_KEY, V3_RECOVERY_KEY, V3_STORAGE_KEY, V4_RECOVERY_KEY, V4_STORAGE_KEY, V5_STORAGE_KEY, type LoadResult } from "../storage/app-store";
 import type { AppState } from "../types/domain";
 
 export function useAppStore() {
@@ -34,10 +34,11 @@ export function useAppStore() {
   function resetAfterRecovery() {
     if (loadResult?.status !== "error") return;
     window.localStorage.setItem(`${loadResult.source}-invalid-recovery`, loadResult.raw);
-    const sourceKey = loadResult.source === "v2" ? V2_STORAGE_KEY : loadResult.source === "v3" ? V3_STORAGE_KEY : V4_STORAGE_KEY;
+    const sourceKey = loadResult.source === "v2" ? V2_STORAGE_KEY : loadResult.source === "v3" ? V3_STORAGE_KEY : loadResult.source === "v4" ? V4_STORAGE_KEY : V5_STORAGE_KEY;
     window.localStorage.removeItem(sourceKey);
     if (loadResult.source === "v2") window.localStorage.setItem(V2_RECOVERY_KEY, loadResult.raw);
     if (loadResult.source === "v3") window.localStorage.setItem(V3_RECOVERY_KEY, loadResult.raw);
+    if (loadResult.source === "v4") window.localStorage.setItem(V4_RECOVERY_KEY, loadResult.raw);
     const fresh = createDefaultState();
     saveAppState(window.localStorage, fresh);
     setState(fresh);
